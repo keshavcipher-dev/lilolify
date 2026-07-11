@@ -509,7 +509,22 @@ void GuiApp::draw_dashboard_panel() {
                     pipeline_status_banner_ = "";
                     active_transaction_id_ = "";
 
-                    if (!std::filesystem::exists(upload_file_buf_)) {
+                    bool path_exists = false;
+                    std::string upload_str(upload_file_buf_);
+                    if (upload_str.find('|') != std::string::npos) {
+                        std::stringstream ss(upload_str);
+                        std::string p;
+                        while (std::getline(ss, p, '|')) {
+                            if (!p.empty() && std::filesystem::exists(p)) {
+                                path_exists = true;
+                                break;
+                            }
+                        }
+                    } else {
+                        path_exists = std::filesystem::exists(upload_file_buf_);
+                    }
+
+                    if (!path_exists) {
                         pipeline_status_banner_ = "Error: Target File path does not exist.";
                     } else {
                         core::FileActionType act = upload_action_type_radio_ == 1 ? core::FileActionType::kCopy : core::FileActionType::kMove;
