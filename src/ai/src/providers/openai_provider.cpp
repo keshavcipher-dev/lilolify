@@ -75,7 +75,7 @@ core::Result<core::AiResponse, core::Error> OpenAiProvider::generate(
     };
 
     if (base_url_.find("openrouter.ai") != std::string::npos) {
-        headers.push_back("HTTP-Referer: https://github.com/keshavbhardwaj/lilolify");
+        headers.push_back("HTTP-Referer: https://github.com/keshavcipher-dev/lilolify");
         headers.push_back("X-Title: Lilolify");
     }
 
