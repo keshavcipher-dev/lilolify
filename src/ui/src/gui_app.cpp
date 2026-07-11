@@ -689,8 +689,30 @@ void GuiApp::draw_history_panel() {
 
     if (records.empty()) {
         ImGui::TextColored(ImVec4(0.55f, 0.60f, 0.65f, 1.00f), "No file actions logged in the Relational Database cache yet.");
+        if (!undo_status_banner_.empty()) {
+            ImGui::Spacing();
+            ImGui::TextColored(ImVec4(0.00f, 0.90f, 0.00f, 1.00f), "%s", undo_status_banner_.c_str());
+        }
         return;
     }
+
+    // Header and Clear History button
+    ImGui::TextColored(ImVec4(0.00f, 0.95f, 1.00f, 1.00f), "📂 Relocation History Logs");
+    ImGui::SameLine();
+    float clear_btn_width = 180.0f;
+    ImGui::SetCursorPosX(ImGui::GetWindowWidth() - clear_btn_width - 24.0f);
+    
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.65f, 0.15f, 0.15f, 0.85f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.85f, 0.25f, 0.25f, 1.00f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.50f, 0.10f, 0.10f, 1.00f));
+    if (ImGui::Button("🗑️ Clear All History", ImVec2(clear_btn_width, 32))) {
+        (void)db.clear_history();
+        undo_status_banner_ = "All database transaction history cleared successfully!";
+    }
+    ImGui::PopStyleColor(3);
+
+    ImGui::Separator();
+    ImGui::Spacing();
 
     if (!undo_status_banner_.empty()) {
         ImGui::TextColored(ImVec4(0.00f, 0.90f, 0.00f, 1.00f), "%s", undo_status_banner_.c_str());
