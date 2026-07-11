@@ -67,6 +67,11 @@ std::string open_file_dialog(HWND hwnd_parent) {
     HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_ALL, 
                                   IID_IFileOpenDialog, reinterpret_cast<void**>(&pFileOpen));
     if (SUCCEEDED(hr)) {
+        FILEOPENDIALOGOPTIONS options;
+        if (SUCCEEDED(pFileOpen->GetOptions(&options))) {
+            pFileOpen->SetOptions(options | FOS_ALLOWMULTISELECT);
+        }
+
         COMDLG_FILTERSPEC fileTypes[] = {
             { L"All Supported Files (*.jpg;*.png;*.pdf;*.txt)", L"*.jpg;*.jpeg;*.png;*.webp;*.pdf;*.txt" },
             { L"Images (*.jpg; *.png; *.webp)", L"*.jpg;*.jpeg;*.png;*.webp" },
@@ -75,17 +80,29 @@ std::string open_file_dialog(HWND hwnd_parent) {
         };
         pFileOpen->SetFileTypes(4, fileTypes);
         if (SUCCEEDED(pFileOpen->Show(hwnd_parent))) {
-            IShellItem* pItem = nullptr;
-            if (SUCCEEDED(pFileOpen->GetResult(&pItem))) {
-                PWSTR pszFilePath = nullptr;
-                if (SUCCEEDED(pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath))) {
-                    int size_needed = WideCharToMultiByte(CP_UTF8, 0, pszFilePath, -1, nullptr, 0, nullptr, nullptr);
-                    std::string str(size_needed - 1, 0);
-                    WideCharToMultiByte(CP_UTF8, 0, pszFilePath, -1, &str[0], size_needed, nullptr, nullptr);
-                    result = std::move(str);
-                    CoTaskMemFree(pszFilePath);
+            IShellItemArray* pItemArray = nullptr;
+            if (SUCCEEDED(pFileOpen->GetResults(&pItemArray))) {
+                DWORD count = 0;
+                if (SUCCEEDED(pItemArray->GetCount(&count))) {
+                    for (DWORD i = 0; i < count; ++i) {
+                        IShellItem* pItem = nullptr;
+                        if (SUCCEEDED(pItemArray->GetItemAt(i, &pItem))) {
+                            PWSTR pszFilePath = nullptr;
+                            if (SUCCEEDED(pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath))) {
+                                int size_needed = WideCharToMultiByte(CP_UTF8, 0, pszFilePath, -1, nullptr, 0, nullptr, nullptr);
+                                std::string str(size_needed - 1, 0);
+                                WideCharToMultiByte(CP_UTF8, 0, pszFilePath, -1, &str[0], size_needed, nullptr, nullptr);
+                                if (!result.empty()) {
+                                    result += "|";
+                                }
+                                result += str;
+                                CoTaskMemFree(pszFilePath);
+                            }
+                            pItem->Release();
+                        }
+                    }
                 }
-                pItem->Release();
+                pItemArray->Release();
             }
         }
         pFileOpen->Release();

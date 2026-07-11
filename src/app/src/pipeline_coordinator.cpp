@@ -13,6 +13,8 @@
 #include <filesystem>
 #include <system_error>
 
+#include <lilolify/infra/filesystem/mime_detector.hpp>
+
 namespace lilolify::app {
 
 // ============================================================================
@@ -138,39 +140,69 @@ void PipelineCoordinator::run_worker(const PipelineConfig& config) {
     // STEP 1: SCANNING PHASE
     update_progress(PipelineState::kScanning, "", "Scanning filesystem for target files...");
 
-    core::ScanOptions options = config.scan_options;
-    options.root_directory = config.scan_root;
-
-    auto scan_res = scanner_.scan(
-        options,
-        [this](const core::ScanProgress& scan_progress) {
-            if (cancellation_requested_) {
-                scanner_.cancel();
+    std::string root_str = config.scan_root.string();
+    if (root_str.find('|') != std::string::npos) {
+        // Direct multiselect files list: skip directory scanning
+        std::stringstream ss(root_str);
+        std::string single_path;
+        while (std::getline(ss, single_path, '|')) {
+            if (!single_path.empty()) {
+                std::filesystem::path fs_path(single_path);
+                if (std::filesystem::exists(fs_path)) {
+                    std::error_code ec;
+                    std::uint64_t file_size = std::filesystem::file_size(fs_path, ec);
+                    if (!ec) {
+                        auto write_time = std::filesystem::last_write_time(fs_path, ec);
+                        auto created = ec ? core::Timestamp{} : std::chrono::clock_cast<std::chrono::system_clock>(write_time);
+                        
+                        core::FileEntry entry(fs_path, file_size, created, created);
+                        
+                        infra::MimeDetector detector;
+                        entry.set_mime_type(detector.detect_from_file(fs_path));
+                        entry.set_status(core::ProcessingStatus::kPending);
+                        
+                        // Save to database
+                        (void)database_.save_file(entry);
+                        paths_to_process.push_back(fs_path);
+                    }
+                }
             }
-            {
-                std::lock_guard<std::mutex> lock(progress_mutex_);
-                progress_.total_files = static_cast<std::uint32_t>(scan_progress.files_found);
-            }
-            update_progress(PipelineState::kScanning);
         }
-    );
+    } else {
+        core::ScanOptions options = config.scan_options;
+        options.root_directory = config.scan_root;
 
-    if (cancellation_requested_) {
-        update_progress(PipelineState::kCancelled, "", "Scan cancelled by user.");
-        is_running_ = false;
-        return;
-    }
+        auto scan_res = scanner_.scan(
+            options,
+            [this](const core::ScanProgress& scan_progress) {
+                if (cancellation_requested_) {
+                    scanner_.cancel();
+                }
+                {
+                    std::lock_guard<std::mutex> lock(progress_mutex_);
+                    progress_.total_files = static_cast<std::uint32_t>(scan_progress.files_found);
+                }
+                update_progress(PipelineState::kScanning);
+            }
+        );
 
-    if (scan_res.has_error()) {
-        update_progress(PipelineState::kFailed, "", "Scanning failed: " + std::string(scan_res.error().message()));
-        is_running_ = false;
-        return;
-    }
+        if (cancellation_requested_) {
+            update_progress(PipelineState::kCancelled, "", "Scan cancelled by user.");
+            is_running_ = false;
+            return;
+        }
 
-    auto scan_result = std::move(scan_res).value();
-    for (const auto& entry : scan_result.files) {
-        (void)database_.save_file(entry);
-        paths_to_process.push_back(entry.path());
+        if (scan_res.has_error()) {
+            update_progress(PipelineState::kFailed, "", "Scanning failed: " + std::string(scan_res.error().message()));
+            is_running_ = false;
+            return;
+        }
+
+        auto scan_result = std::move(scan_res).value();
+        for (const auto& entry : scan_result.files) {
+            (void)database_.save_file(entry);
+            paths_to_process.push_back(entry.path());
+        }
     }
 
     {
