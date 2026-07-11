@@ -217,6 +217,20 @@ bool GuiApp::init_window() {
     // Initialize ImGui bindings
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+
+    // Load modern Segoe UI system font for high-end typography
+    ImGuiIO& io = ImGui::GetIO();
+#ifdef _WIN32
+    std::string font_path = "C:\\Windows\\Fonts\\segoeui.ttf";
+    if (std::filesystem::exists(font_path)) {
+        io.Fonts->AddFontFromFileTTF(font_path.c_str(), 18.5f);
+    } else {
+        io.Fonts->AddFontDefault();
+    }
+#else
+    io.Fonts->AddFontDefault();
+#endif
+
     ImGui_ImplGlfw_InitForOpenGL(window_, true);
     ImGui_ImplOpenGL3_Init("#version 130");
 
@@ -307,9 +321,14 @@ void GuiApp::draw_dashboard_panel() {
     float window_width = ImGui::GetContentRegionAvail().x;
     float col_w = (window_width - 30.0f) * 0.5f;
 
-    ImGui::BeginChild("FolderPanel", ImVec2(col_w, 280), true, ImGuiWindowFlags_None);
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.09f, 0.10f, 0.14f, 0.50f));
+    ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 12.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(16, 16));
+
+    ImGui::BeginChild("FolderPanel", ImVec2(col_w, 290), true, ImGuiWindowFlags_None);
     {
-        ImGui::TextColored(ImVec4(0.00f, 0.95f, 1.00f, 1.00f), "Option A: Batch Folder Reorganization");
+        ImGui::Spacing();
+        ImGui::TextColored(ImVec4(0.00f, 0.95f, 1.00f, 1.00f), " 📂 Option A: Batch Folder Reorganization");
         ImGui::Separator();
         ImGui::Spacing();
 
@@ -349,9 +368,10 @@ void GuiApp::draw_dashboard_panel() {
 
     ImGui::SameLine(0, 30);
 
-    ImGui::BeginChild("FilePanel", ImVec2(col_w, 280), true, ImGuiWindowFlags_None);
+    ImGui::BeginChild("FilePanel", ImVec2(col_w, 290), true, ImGuiWindowFlags_None);
     {
-        ImGui::TextColored(ImVec4(0.00f, 0.95f, 1.00f, 1.00f), "Option B: Direct File Upload");
+        ImGui::Spacing();
+        ImGui::TextColored(ImVec4(0.98f, 0.00f, 0.75f, 1.00f), " ⚡ Option B: Direct File Upload");
         ImGui::Separator();
         ImGui::Spacing();
 
@@ -388,6 +408,9 @@ void GuiApp::draw_dashboard_panel() {
         ImGui::RadioButton("Copy File", &action_type_radio_, 1);
     }
     ImGui::EndChild();
+
+    ImGui::PopStyleVar(2);
+    ImGui::PopStyleColor();
 
     ImGui::Spacing();
     ImGui::Separator();
@@ -718,48 +741,60 @@ void GuiApp::apply_dark_theme() {
     ImGuiStyle& style = ImGui::GetStyle();
     ImVec4* colors = style.Colors;
 
-    style.WindowRounding = 8.0f;
-    style.FrameRounding = 5.0f;
-    style.PopupRounding = 5.0f;
-    style.ScrollbarRounding = 5.0f;
-    style.GrabRounding = 5.0f;
-    style.TabRounding = 5.0f;
-    style.FramePadding = ImVec2(10, 8);
-    style.ItemSpacing = ImVec2(10, 10);
+    style.WindowRounding = 12.0f;
+    style.FrameRounding = 8.0f;
+    style.PopupRounding = 8.0f;
+    style.ScrollbarRounding = 12.0f;
+    style.GrabRounding = 6.0f;
+    style.TabRounding = 8.0f;
+    
+    style.FramePadding = ImVec2(14, 10);
+    style.ItemSpacing = ImVec2(12, 12);
+    style.WindowPadding = ImVec2(20, 20);
+    style.ScrollbarSize = 10.0f;
+    style.GrabMinSize = 16.0f;
 
-    // Deep Charcoal slate layout
-    colors[ImGuiCol_Text]                   = ImVec4(0.95f, 0.96f, 0.98f, 1.00f);
-    colors[ImGuiCol_TextDisabled]           = ImVec4(0.45f, 0.50f, 0.55f, 1.00f);
-    colors[ImGuiCol_WindowBg]               = ImVec4(0.08f, 0.10f, 0.12f, 1.00f);
-    colors[ImGuiCol_ChildBg]                = ImVec4(0.12f, 0.14f, 0.16f, 1.00f);
-    colors[ImGuiCol_PopupBg]                = ImVec4(0.14f, 0.16f, 0.18f, 1.00f);
-    colors[ImGuiCol_Border]                 = ImVec4(0.20f, 0.24f, 0.28f, 1.00f);
+    // Theme: Obsidian cyberpunk with neon glowing accents
+    colors[ImGuiCol_Text]                   = ImVec4(0.96f, 0.97f, 0.99f, 1.00f);
+    colors[ImGuiCol_TextDisabled]           = ImVec4(0.50f, 0.55f, 0.64f, 1.00f);
+    colors[ImGuiCol_WindowBg]               = ImVec4(0.05f, 0.06f, 0.08f, 1.00f); // Obsidian Dark
+    colors[ImGuiCol_ChildBg]                = ImVec4(0.09f, 0.10f, 0.14f, 0.75f); // Translucent Dark Glass
+    colors[ImGuiCol_PopupBg]                = ImVec4(0.07f, 0.08f, 0.11f, 0.95f);
+    colors[ImGuiCol_Border]                 = ImVec4(0.18f, 0.22f, 0.33f, 0.80f); // Sleek Border
     colors[ImGuiCol_BorderShadow]           = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
     
-    // Translucent glass frames
-    colors[ImGuiCol_FrameBg]                = ImVec4(0.16f, 0.19f, 0.22f, 1.00f);
-    colors[ImGuiCol_FrameBgHovered]         = ImVec4(0.22f, 0.26f, 0.30f, 1.00f);
-    colors[ImGuiCol_FrameBgActive]          = ImVec4(0.00f, 0.65f, 0.80f, 1.00f);
+    colors[ImGuiCol_FrameBg]                = ImVec4(0.13f, 0.15f, 0.22f, 0.70f); // Glass input
+    colors[ImGuiCol_FrameBgHovered]         = ImVec4(0.18f, 0.22f, 0.33f, 0.85f);
+    colors[ImGuiCol_FrameBgActive]          = ImVec4(0.00f, 0.95f, 1.00f, 0.20f);
     
-    colors[ImGuiCol_TitleBg]                = ImVec4(0.10f, 0.12f, 0.14f, 1.00f);
-    colors[ImGuiCol_TitleBgActive]          = ImVec4(0.00f, 0.65f, 0.80f, 1.00f);
-    colors[ImGuiCol_TitleBgCollapsed]       = ImVec4(0.06f, 0.08f, 0.10f, 1.00f);
+    colors[ImGuiCol_TitleBg]                = ImVec4(0.05f, 0.06f, 0.08f, 1.00f);
+    colors[ImGuiCol_TitleBgActive]          = ImVec4(0.00f, 0.95f, 1.00f, 0.15f);
+    colors[ImGuiCol_TitleBgCollapsed]       = ImVec4(0.05f, 0.06f, 0.08f, 1.00f);
     
-    // Glowing Cyan accents
+    // Cyan Accent buttons with micro-glow
     colors[ImGuiCol_Button]                 = ImVec4(0.00f, 0.55f, 0.70f, 0.85f);
-    colors[ImGuiCol_ButtonHovered]          = ImVec4(0.00f, 0.70f, 0.85f, 1.00f);
-    colors[ImGuiCol_ButtonActive]           = ImVec4(0.00f, 0.45f, 0.60f, 1.00f);
+    colors[ImGuiCol_ButtonHovered]          = ImVec4(0.00f, 0.95f, 1.00f, 1.00f); // Electric Cyan
+    colors[ImGuiCol_ButtonActive]           = ImVec4(0.00f, 0.60f, 0.70f, 1.00f);
     
-    colors[ImGuiCol_Header]                 = ImVec4(0.18f, 0.24f, 0.30f, 1.00f);
-    colors[ImGuiCol_HeaderHovered]          = ImVec4(0.00f, 0.65f, 0.80f, 0.85f);
-    colors[ImGuiCol_HeaderActive]           = ImVec4(0.00f, 0.75f, 0.95f, 1.00f);
+    colors[ImGuiCol_Header]                 = ImVec4(0.13f, 0.15f, 0.22f, 0.80f);
+    colors[ImGuiCol_HeaderHovered]          = ImVec4(0.00f, 0.95f, 1.00f, 0.30f);
+    colors[ImGuiCol_HeaderActive]           = ImVec4(0.00f, 0.95f, 1.00f, 0.50f);
     
-    // Sleek Tab styles
-    colors[ImGuiCol_Tab]                    = ImVec4(0.14f, 0.16f, 0.18f, 1.00f);
-    colors[ImGuiCol_TabHovered]             = ImVec4(0.00f, 0.75f, 0.95f, 0.85f);
-    colors[ImGuiCol_TabActive]              = ImVec4(0.00f, 0.65f, 0.80f, 1.00f);
-    colors[ImGuiCol_TabUnfocused]           = ImVec4(0.10f, 0.12f, 0.14f, 1.00f);
-    colors[ImGuiCol_TabUnfocusedActive]     = ImVec4(0.14f, 0.16f, 0.18f, 1.00f);
+    // Glowing purple tabs
+    colors[ImGuiCol_Tab]                    = ImVec4(0.09f, 0.10f, 0.14f, 1.00f);
+    colors[ImGuiCol_TabHovered]             = ImVec4(0.98f, 0.00f, 0.75f, 0.80f); // Hot Purple
+    colors[ImGuiCol_TabActive]              = ImVec4(0.98f, 0.00f, 0.75f, 1.00f); // Hot Purple Active
+    colors[ImGuiCol_TabUnfocused]           = ImVec4(0.05f, 0.06f, 0.08f, 1.00f);
+    colors[ImGuiCol_TabUnfocusedActive]     = ImVec4(0.09f, 0.10f, 0.14f, 1.00f);
+
+    colors[ImGuiCol_ScrollbarBg]            = ImVec4(0.05f, 0.06f, 0.08f, 1.00f);
+    colors[ImGuiCol_ScrollbarGrab]          = ImVec4(0.18f, 0.22f, 0.33f, 0.80f);
+    colors[ImGuiCol_ScrollbarGrabHovered]    = ImVec4(0.00f, 0.95f, 1.00f, 0.80f);
+    colors[ImGuiCol_ScrollbarGrabActive]     = ImVec4(0.00f, 0.95f, 1.00f, 1.00f);
+
+    colors[ImGuiCol_CheckMark]              = ImVec4(0.00f, 0.95f, 1.00f, 1.00f);
+    colors[ImGuiCol_SliderGrab]             = ImVec4(0.00f, 0.95f, 1.00f, 0.80f);
+    colors[ImGuiCol_SliderGrabActive]       = ImVec4(0.00f, 0.95f, 1.00f, 1.00f);
 }
 
 }  // namespace lilolify::ui
