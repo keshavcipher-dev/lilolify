@@ -1,28 +1,92 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# ============================================================================
+# Lilolify — .gitignore
+# ============================================================================
 
-# Dependency directories
-node_modules/
-jspm_packages/
-
-# Compiler outputs
-dist/
-dist-ssr/
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
+# --------------------------------------------------------------------------
+# Build directories
+# --------------------------------------------------------------------------
+build/
+out/
+cmake-build-*/
+.vs/
+.vscode/
 .idea/
+
+# --------------------------------------------------------------------------
+# CMake generated files
+# --------------------------------------------------------------------------
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+install_manifest.txt
+compile_commands.json
+CPackConfig.cmake
+CPackSourceConfig.cmake
+_deps/
+
+# --------------------------------------------------------------------------
+# Compiled object files and libraries
+# --------------------------------------------------------------------------
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+*.exe
+*.out
+*.app
+*.pdb
+*.ilk
+*.exp
+
+# --------------------------------------------------------------------------
+# vcpkg
+# --------------------------------------------------------------------------
+vcpkg_installed/
+
+# --------------------------------------------------------------------------
+# IDE and editor files
+# --------------------------------------------------------------------------
+*.swp
+*.swo
+*~
 .DS_Store
+Thumbs.db
+*.user
 *.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+*.ncb
+*.opendb
+*.opensdf
+
+# --------------------------------------------------------------------------
+# Testing artifacts
+# --------------------------------------------------------------------------
+Testing/
+*.gcda
+*.gcno
+*.gcov
+coverage/
+*.profraw
+*.profdata
+
+# --------------------------------------------------------------------------
+# Package artifacts
+# --------------------------------------------------------------------------
+*.tar.gz
+*.zip
+*.deb
+*.rpm
+*.msi
+
+# --------------------------------------------------------------------------
+# Lilolify runtime data (never commit user data)
+# --------------------------------------------------------------------------
+lilolify.db
+logs/
+cache/
+sandbox_organized/
+sandbox_test/
+imgui.ini

@@ -1,0 +1,86 @@
+# ============================================================================
+# Lilolify — Clang-Format Configuration
+# ============================================================================
+# Based on LLVM style with modifications for modern C++20 readability.
+# Run: clang-format -i --style=file <source_file>
+# ============================================================================
+
+Language: Cpp
+BasedOnStyle: LLVM
+
+# --- Indentation ---
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+IndentCaseLabels: true
+IndentPPDirectives: BeforeHash
+NamespaceIndentation: None
+
+# --- Line Length ---
+ColumnLimit: 100
+
+# --- Braces ---
+BreakBeforeBraces: Attach
+Cpp11BracedListStyle: true
+
+# --- Alignment ---
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignOperands: Align
+AlignTrailingComments: true
+
+# --- Line Breaking ---
+AllowShortBlocksOnASingleLine: Empty
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakTemplateDeclarations: Yes
+BinPackArguments: false
+BinPackParameters: false
+BreakConstructorInitializers: BeforeComma
+
+# --- Spaces ---
+SpaceAfterCStyleCast: false
+SpaceAfterTemplateKeyword: true
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeParens: ControlStatements
+SpaceInEmptyBlock: false
+SpacesInAngles: Never
+SpacesInContainerLiterals: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+
+# --- Includes ---
+SortIncludes: CaseSensitive
+IncludeBlocks: Regroup
+IncludeCategories:
+  # Project headers first
+  - Regex: '^<lilolify/'
+    Priority: 1
+  # Third-party headers
+  - Regex: '^<'
+    Priority: 2
+  # Local headers
+  - Regex: '^"'
+    Priority: 3
+
+# --- Miscellaneous ---
+PointerAlignment: Left
+ReferenceAlignment: Left
+ReflowComments: true
+SortUsingDeclarations: true
+FixNamespaceComments: true
+
+# --- C++20 Specific ---
+RequiresClausePosition: OwnLine
+IndentRequiresClause: true
+
+# --- Penalties ---
+PenaltyBreakBeforeFirstCallParameter: 19
+PenaltyBreakComment: 300
+PenaltyBreakFirstLessLess: 120
+PenaltyBreakString: 1000
+PenaltyExcessCharacter: 1000000
+PenaltyReturnTypeOnItsOwnLine: 60

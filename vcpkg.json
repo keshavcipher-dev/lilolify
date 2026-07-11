@@ -1,0 +1,35 @@
+{
+    "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+    "name": "lilolify",
+    "version-string": "0.1.0",
+    "description": "AI-Powered Intelligent Digital File Organization System",
+    "homepage": "https://github.com/lilolify/lilolify",
+    "license": "MIT",
+    "supports": "windows & x64",
+    "dependencies": [
+        {
+            "name": "nlohmann-json",
+            "version>=": "3.11.3"
+        },
+        {
+            "name": "spdlog",
+            "version>=": "1.12.0"
+        },
+        {
+            "name": "gtest",
+            "version>=": "1.14.0"
+        },
+        {
+            "name": "leptonica",
+            "version>=": "1.84.1"
+        },
+        {
+            "name": "tesseract",
+            "version>=": "5.3.4"
+        },
+        {
+            "name": "curl",
+            "version>=": "8.4.0"
+        }
+    ]
+}
