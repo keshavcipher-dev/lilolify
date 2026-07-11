@@ -317,106 +317,14 @@ void GuiApp::draw_dashboard_panel() {
         ImGui::Spacing();
     }
     
-    // Main UI Columns layout (Left: Folder scan; Right: Single file upload)
-    float window_width = ImGui::GetContentRegionAvail().x;
-    float col_w = (window_width - 30.0f) * 0.5f;
-
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.09f, 0.10f, 0.14f, 0.50f));
-    ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 12.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(16, 16));
-
-    ImGui::BeginChild("FolderPanel", ImVec2(col_w, 290), true, ImGuiWindowFlags_None);
-    {
-        ImGui::Spacing();
-        ImGui::TextColored(ImVec4(0.00f, 0.95f, 1.00f, 1.00f), " 📂 Option A: Batch Folder Reorganization");
-        ImGui::Separator();
-        ImGui::Spacing();
-
-        ImGui::Text("Source Directory:");
-        ImGui::InputText("##src_dir", scan_root_buf_, sizeof(scan_root_buf_));
-        ImGui::SameLine();
-        if (ImGui::Button("Browse##src_btn")) {
-#ifdef _WIN32
-            HWND hwnd = glfwGetWin32Window(window_);
-            std::string selected = open_folder_dialog(hwnd);
-            if (!selected.empty()) {
-                strncpy_s(scan_root_buf_, selected.c_str(), sizeof(scan_root_buf_) - 1);
-            }
-#endif
-        }
-
-        ImGui::Spacing();
-        ImGui::Text("Destination Base Directory:");
-        ImGui::InputText("##dest_dir", dest_root_buf_, sizeof(dest_root_buf_));
-        ImGui::SameLine();
-        if (ImGui::Button("Browse##dest_btn")) {
-#ifdef _WIN32
-            HWND hwnd = glfwGetWin32Window(window_);
-            std::string selected = open_folder_dialog(hwnd);
-            if (!selected.empty()) {
-                strncpy_s(dest_root_buf_, selected.c_str(), sizeof(dest_root_buf_) - 1);
-            }
-#endif
-        }
-
-        ImGui::Spacing();
-        ImGui::Text("Action Strategy:");
-        ImGui::RadioButton("Move Files", &action_type_radio_, 0); ImGui::SameLine();
-        ImGui::RadioButton("Copy Files", &action_type_radio_, 1);
+    // Initialize defaults from settings if empty
+    if (strlen(dest_root_buf_) == 0 && !s.organization.destination_base.empty()) {
+        strncpy_s(dest_root_buf_, s.organization.destination_base.c_str(), sizeof(dest_root_buf_) - 1);
     }
-    ImGui::EndChild();
-
-    ImGui::SameLine(0, 30);
-
-    ImGui::BeginChild("FilePanel", ImVec2(col_w, 290), true, ImGuiWindowFlags_None);
-    {
-        ImGui::Spacing();
-        ImGui::TextColored(ImVec4(0.98f, 0.00f, 0.75f, 1.00f), " ⚡ Option B: Direct File Upload");
-        ImGui::Separator();
-        ImGui::Spacing();
-
-        ImGui::Text("Target File / Image to Upload:");
-        ImGui::InputText("##file_dir", scan_root_buf_, sizeof(scan_root_buf_));
-        ImGui::SameLine();
-        if (ImGui::Button("Browse File##file_btn")) {
-#ifdef _WIN32
-            HWND hwnd = glfwGetWin32Window(window_);
-            std::string selected = open_file_dialog(hwnd);
-            if (!selected.empty()) {
-                strncpy_s(scan_root_buf_, selected.c_str(), sizeof(scan_root_buf_) - 1);
-            }
-#endif
-        }
-
-        ImGui::Spacing();
-        ImGui::Text("Destination Base Directory:");
-        ImGui::InputText("##dest_dir_file", dest_root_buf_, sizeof(dest_root_buf_));
-        ImGui::SameLine();
-        if (ImGui::Button("Browse##dest_btn_file")) {
-#ifdef _WIN32
-            HWND hwnd = glfwGetWin32Window(window_);
-            std::string selected = open_folder_dialog(hwnd);
-            if (!selected.empty()) {
-                strncpy_s(dest_root_buf_, selected.c_str(), sizeof(dest_root_buf_) - 1);
-            }
-#endif
-        }
-
-        ImGui::Spacing();
-        ImGui::Text("Action Strategy:");
-        ImGui::RadioButton("Move File", &action_type_radio_, 0); ImGui::SameLine();
-        ImGui::RadioButton("Copy File", &action_type_radio_, 1);
+    if (strlen(upload_dest_buf_) == 0 && !s.organization.destination_base.empty()) {
+        strncpy_s(upload_dest_buf_, s.organization.destination_base.c_str(), sizeof(upload_dest_buf_) - 1);
     }
-    ImGui::EndChild();
 
-    ImGui::PopStyleVar(2);
-    ImGui::PopStyleColor();
-
-    ImGui::Spacing();
-    ImGui::Separator();
-    ImGui::Spacing();
-
-    // Replicate current background thread progress if running
     is_job_running_ = app_shell_.is_job_running();
     if (is_job_running_) {
         std::lock_guard<std::mutex> lock(progress_mutex_);
@@ -424,56 +332,196 @@ void GuiApp::draw_dashboard_panel() {
         active_transaction_id_ = progress_snapshot_.status_message;
     }
 
-    // Process Buttons Layout
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.00f, 0.65f, 0.80f, 1.00f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.00f, 0.80f, 1.00f, 1.00f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.00f, 0.50f, 0.65f, 1.00f));
-    
-    if (!is_job_running_) {
-        if (ImGui::Button("Execute Organization Pipeline", ImVec2(280, 45))) {
-            pipeline_status_banner_ = "";
-            active_transaction_id_ = "";
+    // Modern Sub-Tab layout for clean workflows
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(16, 12));
+    bool began_sub = ImGui::BeginTabBar("DashboardSubTabs", ImGuiTabBarFlags_None);
+    ImGui::PopStyleVar();
 
-            // Validate Paths
-            if (!std::filesystem::exists(scan_root_buf_)) {
-                pipeline_status_banner_ = "Error: Specified Source Path does not exist. Please use the Browse buttons to select a valid file or folder.";
-            } else {
-                // Automatically default destination path if left empty to prevent mandatory requirements
-                if (strlen(dest_root_buf_) == 0) {
-                    std::filesystem::path src_path(scan_root_buf_);
-                    std::string auto_dest;
-                    if (std::filesystem::is_regular_file(src_path)) {
-                        auto_dest = src_path.parent_path().string();
-                    } else {
-                        auto_dest = (src_path.parent_path() / "Lilolify_Organized").string();
+    if (began_sub) {
+        // TAB 1: BATCH FOLDER REORGANIZER
+        if (ImGui::BeginTabItem(" 📂 Batch Folder Reorganization ")) {
+            ImGui::Spacing();
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.09f, 0.10f, 0.14f, 0.50f));
+            ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 12.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(20, 20));
+
+            ImGui::BeginChild("FolderReorgChild", ImVec2(0, 310), true);
+            {
+                ImGui::Spacing();
+                ImGui::TextColored(ImVec4(0.00f, 0.95f, 1.00f, 1.00f), "⚡ Automated Batch Scanner");
+                ImGui::TextColored(ImVec4(0.50f, 0.55f, 0.64f, 1.00f), "Scans directories recursively and groups all assets by category.");
+                ImGui::Separator();
+                ImGui::Spacing();
+
+                ImGui::Text("Source Directory to Scan:");
+                ImGui::InputText("##src_dir", scan_root_buf_, sizeof(scan_root_buf_));
+                ImGui::SameLine();
+                if (ImGui::Button("Browse##src_btn")) {
+#ifdef _WIN32
+                    HWND hwnd = glfwGetWin32Window(window_);
+                    std::string selected = open_folder_dialog(hwnd);
+                    if (!selected.empty()) {
+                        strncpy_s(scan_root_buf_, selected.c_str(), sizeof(scan_root_buf_) - 1);
                     }
-                    strncpy_s(dest_root_buf_, auto_dest.c_str(), sizeof(dest_root_buf_) - 1);
+#endif
                 }
 
-                core::FileActionType act = action_type_radio_ == 1 ? core::FileActionType::kCopy : core::FileActionType::kMove;
-                
-                auto callback = [this](const app::PipelineProgress& p) {
-                    std::lock_guard<std::mutex> lock(progress_mutex_);
-                    progress_snapshot_ = p;
-                };
-
-                auto start_res = app_shell_.start_job(scan_root_buf_, dest_root_buf_, act, callback);
-                if (start_res.has_error()) {
-                    pipeline_status_banner_ = "Failed to launch pipeline: " + std::string(start_res.error().message());
+                ImGui::Spacing();
+                ImGui::Text("Destination Base Directory:");
+                ImGui::InputText("##dest_dir", dest_root_buf_, sizeof(dest_root_buf_));
+                ImGui::SameLine();
+                if (ImGui::Button("Browse##dest_btn")) {
+#ifdef _WIN32
+                    HWND hwnd = glfwGetWin32Window(window_);
+                    std::string selected = open_folder_dialog(hwnd);
+                    if (!selected.empty()) {
+                        strncpy_s(dest_root_buf_, selected.c_str(), sizeof(dest_root_buf_) - 1);
+                        strncpy_s(upload_dest_buf_, selected.c_str(), sizeof(upload_dest_buf_) - 1);
+                    }
+#endif
                 }
+
+                ImGui::Spacing();
+                ImGui::Text("Action Strategy:"); ImGui::SameLine();
+                ImGui::RadioButton("Move Files", &action_type_radio_, 0); ImGui::SameLine();
+                ImGui::RadioButton("Copy Files", &action_type_radio_, 1);
             }
+            ImGui::EndChild();
+            ImGui::PopStyleVar(2);
+            ImGui::PopStyleColor();
+
+            ImGui::Spacing();
+
+            // Run / Stop Actions
+            if (!is_job_running_) {
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.00f, 0.55f, 0.70f, 0.85f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.00f, 0.95f, 1.00f, 1.00f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.00f, 0.45f, 0.60f, 1.00f));
+                if (ImGui::Button("⚡ Execute Batch Reorganization", ImVec2(320, 50))) {
+                    pipeline_status_banner_ = "";
+                    active_transaction_id_ = "";
+
+                    if (!std::filesystem::exists(scan_root_buf_)) {
+                        pipeline_status_banner_ = "Error: Source Directory path does not exist.";
+                    } else {
+                        core::FileActionType act = action_type_radio_ == 1 ? core::FileActionType::kCopy : core::FileActionType::kMove;
+                        auto callback = [this](const app::PipelineProgress& p) {
+                            std::lock_guard<std::mutex> lock(progress_mutex_);
+                            progress_snapshot_ = p;
+                        };
+                        auto start_res = app_shell_.start_job(scan_root_buf_, dest_root_buf_, act, callback);
+                        if (start_res.has_error()) {
+                            pipeline_status_banner_ = "Failed to launch pipeline: " + std::string(start_res.error().message());
+                        }
+                    }
+                }
+                ImGui::PopStyleColor(3);
+            } else {
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.80f, 0.15f, 0.15f, 1.00f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.00f, 0.25f, 0.25f, 1.00f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.65f, 0.10f, 0.10f, 1.00f));
+                if (ImGui::Button("🛑 Force Stop Active Pipeline Job", ImVec2(320, 50))) {
+                    app_shell_.cancel_job();
+                }
+                ImGui::PopStyleColor(3);
+            }
+
+            ImGui::EndTabItem();
         }
-    } else {
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.80f, 0.15f, 0.15f, 1.00f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.00f, 0.25f, 0.25f, 1.00f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.65f, 0.10f, 0.10f, 1.00f));
-        if (ImGui::Button("Force Stop Active Pipeline Job", ImVec2(280, 45))) {
-            app_shell_.cancel_job();
+
+        // TAB 2: DIRECT FILE UPLINK
+        if (ImGui::BeginTabItem(" 📤 Direct File Upload / Uplink ")) {
+            ImGui::Spacing();
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.09f, 0.10f, 0.14f, 0.50f));
+            ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 12.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(20, 20));
+
+            ImGui::BeginChild("FileUplinkChild", ImVec2(0, 310), true);
+            {
+                ImGui::Spacing();
+                ImGui::TextColored(ImVec4(0.98f, 0.00f, 0.75f, 1.00f), "🚀 Vision Classifier Uplink");
+                ImGui::TextColored(ImVec4(0.50f, 0.55f, 0.64f, 1.00f), "Uploads a single photo/document, running OCR and multimodal AI to relocate it.");
+                ImGui::Separator();
+                ImGui::Spacing();
+
+                ImGui::Text("Target File / Image to Upload:");
+                ImGui::InputText("##file_dir", upload_file_buf_, sizeof(upload_file_buf_));
+                ImGui::SameLine();
+                if (ImGui::Button("Browse File##file_btn")) {
+#ifdef _WIN32
+                    HWND hwnd = glfwGetWin32Window(window_);
+                    std::string selected = open_file_dialog(hwnd);
+                    if (!selected.empty()) {
+                        strncpy_s(upload_file_buf_, selected.c_str(), sizeof(upload_file_buf_) - 1);
+                    }
+#endif
+                }
+
+                ImGui::Spacing();
+                ImGui::Text("Destination Base Directory:");
+                ImGui::InputText("##dest_dir_file", upload_dest_buf_, sizeof(upload_dest_buf_));
+                ImGui::SameLine();
+                if (ImGui::Button("Browse##dest_btn_file")) {
+#ifdef _WIN32
+                    HWND hwnd = glfwGetWin32Window(window_);
+                    std::string selected = open_folder_dialog(hwnd);
+                    if (!selected.empty()) {
+                        strncpy_s(upload_dest_buf_, selected.c_str(), sizeof(upload_dest_buf_) - 1);
+                        strncpy_s(dest_root_buf_, selected.c_str(), sizeof(dest_root_buf_) - 1);
+                    }
+#endif
+                }
+
+                ImGui::Spacing();
+                ImGui::Text("Post-Execution Behavior:"); ImGui::SameLine();
+                ImGui::RadioButton("Move File (Safe Erase from Upload Folder)", &upload_action_type_radio_, 0); ImGui::SameLine();
+                ImGui::RadioButton("Copy File (Keep original)", &upload_action_type_radio_, 1);
+            }
+            ImGui::EndChild();
+            ImGui::PopStyleVar(2);
+            ImGui::PopStyleColor();
+
+            ImGui::Spacing();
+
+            // Run / Stop Actions
+            if (!is_job_running_) {
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.85f, 0.00f, 0.65f, 0.85f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.00f, 0.00f, 0.80f, 1.00f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.70f, 0.00f, 0.50f, 1.00f));
+                if (ImGui::Button("🚀 Upload, Classify & Relocate File", ImVec2(320, 50))) {
+                    pipeline_status_banner_ = "";
+                    active_transaction_id_ = "";
+
+                    if (!std::filesystem::exists(upload_file_buf_)) {
+                        pipeline_status_banner_ = "Error: Target File path does not exist.";
+                    } else {
+                        core::FileActionType act = upload_action_type_radio_ == 1 ? core::FileActionType::kCopy : core::FileActionType::kMove;
+                        auto callback = [this](const app::PipelineProgress& p) {
+                            std::lock_guard<std::mutex> lock(progress_mutex_);
+                            progress_snapshot_ = p;
+                        };
+                        auto start_res = app_shell_.start_job(upload_file_buf_, upload_dest_buf_, act, callback);
+                        if (start_res.has_error()) {
+                            pipeline_status_banner_ = "Failed to launch pipeline: " + std::string(start_res.error().message());
+                        }
+                    }
+                }
+                ImGui::PopStyleColor(3);
+            } else {
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.80f, 0.15f, 0.15f, 1.00f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.00f, 0.25f, 0.25f, 1.00f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.65f, 0.10f, 0.10f, 1.00f));
+                if (ImGui::Button("🛑 Force Stop Active Pipeline Job", ImVec2(320, 50))) {
+                    app_shell_.cancel_job();
+                }
+                ImGui::PopStyleColor(3);
+            }
+
+            ImGui::EndTabItem();
         }
-        ImGui::PopStyleColor(3);
+
+        ImGui::EndTabBar();
     }
-    
-    ImGui::PopStyleColor(3);
 
     ImGui::Spacing();
     ImGui::Separator();

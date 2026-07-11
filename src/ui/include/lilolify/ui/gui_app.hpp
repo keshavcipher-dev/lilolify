@@ -63,6 +63,11 @@ private:
     char dest_root_buf_[512]{""};
     int action_type_radio_{0}; // 0 = Move, 1 = Copy
 
+    // Option B: Single File Upload buffers
+    char upload_file_buf_[512]{""};
+    char upload_dest_buf_[512]{""};
+    int upload_action_type_radio_{0}; // 0 = Move (Erase), 1 = Copy
+
     // Settings panel input buffers
     int ai_provider_idx_{0}; // 0 = openai, 1 = gemini, 2 = claude
     char api_key_buf_[256]{""};
